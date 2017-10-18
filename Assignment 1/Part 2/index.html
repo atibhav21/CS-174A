@@ -77,9 +77,10 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       
       model_transform = model_transform.times( Mat4.translation( Vec.of( 0,10,0 ) ) );
       
-      if( !this.hover ) model_transform = model_transform.times( Mat4.rotation( -this.t, Vec.of( 0,1,0 ) ) );
+      // TODO: UNCOMMENT, TIME BASED ROTATION
+      //if( !this.hover ) model_transform = model_transform.times( Mat4.rotation( -this.t, Vec.of( 0,1,0 ) ) );
       
-      this.shapes.ball.draw( graphics_state, model_transform, this.silver );
+      /*this.shapes.ball.draw( graphics_state, model_transform, this.silver );
       
       model_transform = model_transform.times( Mat4.translation( Vec.of( 0,-( 1 + .2 ),0 ) ) );
       
@@ -88,7 +89,44 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       for( let side of [-1,1] )                                                     // For each of the two values -1 and 1,
       { let flipped = model_transform.times( Mat4.scale([ 1,1,side ]) );            // Reflect the coordinate system (or not) depending on the value.
         this.draw_arm( graphics_state, flipped );                                   // Example of how to call your own function, passing in your matrix.
-      }                                                                             
+      } */    
+
+      var thorax_matrix = model_transform.times(Mat4.scale([3, 1,1]));
+
+      this.shapes.box.draw(graphics_state, thorax_matrix, this.yellow); // THORAX
+
+      thorax_matrix = thorax_matrix.times(Mat4.scale([1/3,1,1]));
+
+      var head_matrix = thorax_matrix.times(Mat4.translation([-4.5, 0, 0])).times(Mat4.scale([1.5,1.5,1.5]));
+
+      this.shapes.ball.draw(graphics_state, head_matrix, this.red); //HEAD 
+
+      var abdomen_matrix = thorax_matrix.times(Mat4.translation([5,0,0])).times(Mat4.scale([2,0.7,1]))
+
+      this.shapes.ball.draw(graphics_state, abdomen_matrix, this.yellow);  // ABDOMEN
+
+
+
+      // ADD ITS WINGS
+
+      var sqrt_2 = Math.sqrt(2);
+
+      var wing_plane_angle = (-Math.PI/4)* (Math.sin(2 * this.t));
+
+      for(var i = 0; i < 2; i++) {
+        for(var j = 0; j < 2; j++) {
+          var wing_matrix = thorax_matrix.times(Mat4.translation([Math.pow(-1, i) * 3, 1, Math.pow(-1,j) * 1])); // TRANSLATE TO THORAX CORNERS
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0))).times(Mat4.scale([1.5*sqrt_2,0.1,1.5*sqrt_2])); // Scale and then rotate around Y
+
+          this.shapes.box.draw(graphics_state, wing_matrix, this.blue);
+        }
+      }
+      
+
+      
+
+
     }    
 }
 </script>
