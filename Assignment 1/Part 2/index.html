@@ -50,6 +50,67 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
     { const arm = model_transform.times( Mat4.translation([ 0,0,3+1 ]) );
       this.shapes.ball.draw( graphics_state, arm, this.blue );
     }
+
+  draw_wings(graphics_state, thorax_matrix) 
+  {
+      var sqrt_2 = Math.sqrt(2);
+
+      var wing_plane_angle =  (Math.PI/4)* (Math.sin(2 * this.t + Math.PI)) - Math.PI/4; // CREATE A SINE FUNCTION FOR THE ANGLE CREATED By the wings and the x-axis
+      // TODO: Maybe modify the factor 2 
+
+      for(var i = 0; i < 2; i++) {
+        for(var j = 0; j < 2; j++) {
+          var wing_matrix = thorax_matrix.times(Mat4.translation([Math.pow(-1, i) * 3, 1, Math.pow(-1,j) * 1])); // TRANSLATE TO THORAX CORNERS
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0))).times(Mat4.scale([1.5*sqrt_2,0.1,1.5*sqrt_2])); // Scale and then rotate around Y
+
+          this.shapes.box.draw(graphics_state, wing_matrix, this.blue);
+        }
+      }
+  }
+
+  negate_vector(vector) {
+    for(var i = 0; i < 3; i++) {
+      vector[i] = - vector[i];
+    }
+    return vector;
+  }
+
+  draw_leg(graphics_state, thorax_matrix, attach_point_vector, thorax_angle, revTrue)
+  {
+    /*var leg_matrix = thorax_matrix.times(Mat4.translation(attach_point_vector)).times(Mat4.rotation(-Math.PI/4, Vec.of(1,0,0)));
+    leg_matrix = leg_matrix.times(Mat4.translation(0,-0.6,0.1)).times(Mat4.scale([0.1,0.6,0.1]));
+    this.shapes.box.draw(graphics_state, leg_matrix, this.red);*/
+
+    var leg_matrix = Mat4.translation(attach_point_vector).times(Mat4.rotation(-thorax_angle, Vec.of(1,0,0)));
+    leg_matrix = leg_matrix.times(Mat4.translation([0,-0.6,(Math.pow(-1, revTrue)) * 0.1])).times(Mat4.scale([0.1,0.6,0.1]));
+    this.shapes.box.draw(graphics_state, thorax_matrix.times(leg_matrix), this.red);
+
+
+    leg_matrix = leg_matrix.times(Mat4.scale([10,1/0.6,10])).times(Mat4.translation([0,0.6,(Math.pow(-1, revTrue + 1)) * 0.1]));
+    // TRY DELAYING SECOND PART OF LEG ROTATION BY PI/2
+    /*var second_leg_matrix = leg_matrix.times(Mat4.translation([2,5,3])).times(Mat4.rotation(Math.PI/3, Vec.of(1,0,0)));
+    second_leg_matrix = second_leg_matrix.times(Mat4.translation([0,-1,(Math.pow(-1, revTrue)) * 0.1])).times(Mat4.scale([1,1,1]));*/
+
+    var second_angle = Math.pow(-1, revTrue) *  Math.PI/6 //* Math.sin(this.t);
+    var second_attach_vec = Vec.of(0,-1.2 * Math.cos(-thorax_angle),-1.2 * Math.sin(-thorax_angle));
+    //var second_leg_matrix = Mat4.translation(second_attach_vec).times(Mat4.rotation(second_angle, Vec.of(1,0,0))).times(leg_matrix);
+
+    //var second_leg_matrix = thorax_matrix.times(leg_matrix).times(Mat4.translation([0,-2,0])).times(Mat4.rotation(second_angle, Vec.of(1,0,0)));
+
+    var second_leg_matrix = thorax_matrix.times(leg_matrix).times(Mat4.translation([0, -1.2, 0])).times(Mat4.rotation(second_angle, Vec.of(1,0,0)));
+    second_leg_matrix = second_leg_matrix.times(Mat4.translation([0,-0.6,(Math.pow(-1, revTrue)) * 0.1])).times(Mat4.scale([0.1,0.6,0.1]));
+
+    // console.log(attach_point_vector);
+    // console.log(Mat4.scale([-1,-1,-1]) * attach_point_vector);
+
+    /*var second_leg_matrix = Mat4.rotation(thorax_angle, Vec.of(1,0,0)).times(Mat4.translation(this.negate_vector(attach_point_vector))).times(leg_matrix);
+    second_leg_matrix = second_leg_matrix.times(Mat4.rotation(second_angle, Vec.of(1,0,0))).times(Mat4.translation(attach_point_vector))
+    console.log(second_leg_matrix);*/
+    this.shapes.box.draw(graphics_state, second_leg_matrix, this.silver);
+
+  }
+
   display( graphics_state )
     { graphics_state.lights = [ new Light( Vec.of(  30, 30,  34, 1 ), Color.of( 0, .4, 0, 1 ), 100000 ),         // Lights for Phong_Shader to use
                                 new Light( Vec.of( -10, 20, -14, 0 ), Color.of( 1, 1, .3, 1 ), 100    ) ]
@@ -60,17 +121,9 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       Start coding down here!!!!
       **********************************/                                     // From here on down it's just some example shapes drawn 
                                                                               // for you -- freely replace them with your own!                          
-                                
-                                
-      
-
-
-
-
-
 
       
-      this.shapes.box.draw( graphics_state, Mat4.scale([ 15,.1,15 ]), this.green );                           // Ground plane.                          
+      this.shapes.box.draw( graphics_state, Mat4.scale([ 30,.1,30 ]), this.green );                           // Ground plane.                          
       
       this.t = graphics_state.animation_time/1000;      
       let model_transform = Mat4.identity();                // This will be a temporary matrix that helps us draw most shapes.  It starts over as the identity every single frame.
@@ -108,22 +161,27 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
 
 
       // ADD ITS WINGS
-
-      var sqrt_2 = Math.sqrt(2);
-
-      var wing_plane_angle = (-Math.PI/4)* (Math.sin(2 * this.t));
-
-      for(var i = 0; i < 2; i++) {
-        for(var j = 0; j < 2; j++) {
-          var wing_matrix = thorax_matrix.times(Mat4.translation([Math.pow(-1, i) * 3, 1, Math.pow(-1,j) * 1])); // TRANSLATE TO THORAX CORNERS
-          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
-          wing_matrix = wing_matrix.times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0))).times(Mat4.scale([1.5*sqrt_2,0.1,1.5*sqrt_2])); // Scale and then rotate around Y
-
-          this.shapes.box.draw(graphics_state, wing_matrix, this.blue);
+      this.draw_wings(graphics_state, thorax_matrix);
+      
+      // DRAW 6 LEGS
+      var thorax_leg_angle =  ( Math.PI/4 ) + (Math.PI/6) * Math.sin(2 * this.t);
+      for(var i = 0; i < 2; i++) { // TODO: CHANGE TO 2
+        for (var j = 0; j < 3; j++) { // TODO: CHANGE TO 3
+          var epsilon = 2;
+          // TODO: MODIFY ATTACH POINT VEC, LEG ON OTHER SIDE (negative Z) DOESN'T ATTACH CORRECTLY, BECAUSE OF ROTATION AROUND WRONG POINT
+          var attach_vec = Vec.of(-2.9 + j * epsilon, -1 , Math.pow(-1, i));
+          this.draw_leg(graphics_state, thorax_matrix, attach_vec, Math.pow(-1, i) * thorax_leg_angle, i);
         }
       }
       
 
+      // ADD ITS LEGS
+      /*var leg_matrix = thorax_matrix.times(Mat4.translation([-3,-1,1])).times(Mat4.rotation(-Math.PI/4, Vec.of(1,0,0))).times(Mat4.translation([0,-0.6,0.1])).times(Mat4.scale([0.1,0.6,0.1]));
+      this.shapes.box.draw(graphics_state, leg_matrix, this.red);*/
+      //this.draw_leg(graphics_state, leg_matrix);
+      
+      
+      
       
 
 
