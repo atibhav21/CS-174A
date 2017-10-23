@@ -56,12 +56,12 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       var sqrt_2 = Math.sqrt(2);
 
       // TODO: UNCOMMENT
-      var wing_plane_angle =  (Math.PI/4)* (Math.sin(2.5 * this.t + Math.PI)) - Math.PI/4; // CREATE A SINE FUNCTION FOR THE ANGLE CREATED By the wings and the x-axis
+      var wing_plane_angle =  (Math.PI/4) * (Math.sin(2.5 * this.t + Math.PI)) - Math.PI/4; // CREATE A SINE FUNCTION FOR THE ANGLE CREATED By the wings and the x-axis
 
       for(var i = 0; i < 2; i++) {
         for(var j = 0; j < 2; j++) {
           var wing_matrix = thorax_matrix.times(Mat4.translation([Math.pow(-1, i) * 3, 1, Math.pow(-1,j) * 1])); // TRANSLATE TO THORAX CORNERS
-          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0.1, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
           wing_matrix = wing_matrix.times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0))).times(Mat4.scale([1.5*sqrt_2,0.1,1.5*sqrt_2])); // Scale and then rotate around Y
 
           this.shapes.box.draw(graphics_state, wing_matrix, this.blue);
@@ -78,7 +78,7 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
 
 
     leg_matrix = leg_matrix.times(Mat4.scale([10,1/0.6,10])).times(Mat4.translation([0,0.6,(Math.pow(-1, revTrue + 1)) * 0.1]));
-    // TRY DELAYING SECOND PART OF LEG ROTATION BY PI/2
+    
   
     var second_angle = Math.pow(-1, revTrue) * (Math.PI/8 + Math.PI/8 * Math.cos(2.5 * this.t + Math.PI/4)) ;
 
@@ -89,10 +89,10 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
 
   }
 
-  draw_antenna_boxes(graphics_state, prev_box_matrix, R, count)
+  draw_antenna_boxes(graphics_state, prev_box_matrix, R, count, color)
   { 
       if(count == 8) {
-        return;
+        return prev_box_matrix.times(Mat4.scale([20,10,20])).times(Mat4.translation([0,0,0.05]));
       }
 
       prev_box_matrix = prev_box_matrix.times(Mat4.scale([20,10,20])).times(Mat4.translation([0,0,0.05]))
@@ -100,9 +100,15 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       var next_box = prev_box_matrix.times(Mat4.translation([-0.05,0.1,0.-0.05])).times(Mat4.rotation(R, Vec.of(0,0,1)))
       next_box = next_box.times(Mat4.translation([0.05,0.1, 0.00])).times(Mat4.scale([0.05,0.1,0.05]));
 
-      this.shapes.box.draw(graphics_state, next_box, this.brown);
+      this.shapes.box.draw(graphics_state, next_box, color);
 
-      this.draw_antenna_boxes(graphics_state, next_box, R , count + 1);
+      if(color == this.brown) {
+        return this.draw_antenna_boxes(graphics_state, next_box, R , count + 1, this.silver);
+      }
+      else {
+        return this.draw_antenna_boxes(graphics_state, next_box, R , count + 1, this.brown);
+      }
+      
 
   }
 
@@ -139,11 +145,26 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
         this.draw_arm( graphics_state, flipped );                                   // Example of how to call your own function, passing in your matrix.
       } */    
 
-      var thorax_matrix = model_transform.times(Mat4.scale([3, 1,1]));
+      var thorax_matrix = model_transform;
+
+      if(! this.hover) {
+        var y_height = 2 * Math.sin(2.5 * this.t + Math.PI);
+        var radius = 15;
+        var thorax_theta = (-this.t) % (2 * Math.PI);
+        var butterfly_vertical_rotation_angle = - Math.PI/6; // Change this to rotate butterfly steeper in the vertical direction
+        var x_coord = radius * Math.sin(thorax_theta);
+        var z_coord = radius * Math.cos(thorax_theta);
+        var thorax_matrix = model_transform.times(Mat4.translation([x_coord, y_height, z_coord])).times(Mat4.rotation(thorax_theta, Vec.of(0,1,0)))
+        thorax_matrix = thorax_matrix.times(Mat4.rotation(butterfly_vertical_rotation_angle, Vec.of(0,0,1)));
+      }
+      
+      thorax_matrix = thorax_matrix.times(Mat4.scale([3, 1,1]));
 
       this.shapes.box.draw(graphics_state, thorax_matrix, this.yellow); // THORAX
 
       thorax_matrix = thorax_matrix.times(Mat4.scale([1/3,1,1]));
+
+      //thorax_matrix = model_transform;
 
       var head_matrix = thorax_matrix.times(Mat4.translation([-4.5, 0, 0])).times(Mat4.scale([1.5,1.5,1.5]));
 
@@ -171,20 +192,35 @@ class Butterfly_Scene extends Scene_Component  // Code your butterfly assignment
       
 
       // MODIFY so that center edge of box is in contact with head
-      var phi = Math.PI/6
+      var phi = Math.PI/4
       var rho = 1.1;
       var theta = Math.PI/4;//Math.PI/2;
+      
       var cylindrical_loc = Vec.of(- 1 * rho * Math.sin(phi) * Math.cos(theta), rho * Math.cos(phi), rho * Math.sin(phi) * Math.sin(theta));
       var antenna_matrix = head_matrix.times(Mat4.translation(cylindrical_loc)).times(Mat4.rotation(theta, Vec.of(0,1,0)))
       antenna_matrix = antenna_matrix.times(Mat4.rotation(phi, Vec.of(0,0,1))).times(Mat4.translation([0, 0, -0.05])).times(Mat4.scale([0.05,0.1,0.05]));
       this.shapes.box.draw(graphics_state, antenna_matrix, this.brown);
-      //this.draw_antenna_boxes(graphics_state, head_matrix, phi, 0);
+      
+      theta = theta * -1;
+      var cylindrical_loc = Vec.of(- 1 * rho * Math.sin(phi) * Math.cos(theta), rho * Math.cos(phi), rho * Math.sin(phi) * Math.sin(theta));
+      var antenna_matrix_2 = head_matrix.times(Mat4.translation(cylindrical_loc)).times(Mat4.rotation(theta, Vec.of(0,1,0)))
+      antenna_matrix_2 = antenna_matrix_2.times(Mat4.rotation(phi, Vec.of(0,0,1))).times(Mat4.translation([0, 0, -0.05])).times(Mat4.scale([0.05,0.1,0.05]));
+      this.shapes.box.draw(graphics_state, antenna_matrix_2, this.brown);
       // ROTATE BY Y AND Z
       // ITERATIVELY INCREMENT Z ROTATION ANGLE FOR EACH BOX BY R RADIANS
       // Maybe alternate colors between brown and white
-      var R = Math.PI/12;
-      this.draw_antenna_boxes(graphics_state, antenna_matrix, R, 0);
+      
 
+
+      var R = Math.PI/30 + Math.PI/30 * Math.sin(2.5 * this.t + Math.PI) ;
+      var final_box = this.draw_antenna_boxes(graphics_state, antenna_matrix, R, 0, this.silver);
+      var final_box_2 = this.draw_antenna_boxes(graphics_state, antenna_matrix_2, R, 0, this.silver);
+
+      var antenna_tip = final_box.times(Mat4.scale([0.5,0.5,0.5])).times(Mat4.translation([0,1.2,0]));
+      this.shapes.ball.draw(graphics_state, antenna_tip, this.green);
+
+      var antenna_tip_2 = final_box_2.times(Mat4.scale([0.5,0.5,0.5])).times(Mat4.translation([0,1.2,0]));
+      this.shapes.ball.draw(graphics_state, antenna_tip_2, this.green);
       /*antenna_matrix = antenna_matrix.times(Mat4.scale([20,10,20])).times(Mat4.translation([0,0,0.05]))//.times(Mat4.rotation(-phi, Vec.of(0,0,1)))//.times(Mat4.rotation(-theta, Vec.of(0,1,0)));
 
       // DO WHAT YOU DID WITH SECOND PART OF LEG
