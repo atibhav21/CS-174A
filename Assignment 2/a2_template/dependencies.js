@@ -522,6 +522,7 @@ class leg extends Surface_Of_Revolution
   }
 }
 
+
 class Human extends Shape
 {
   constructor() 
@@ -552,18 +553,22 @@ class Human extends Shape
     Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix_2).times(forearm_matrix), 0);
 
     forearm_matrix = forearm_matrix.times(Mat4.scale([10, 2/3, 10])).times(Mat4.translation([0, 1.5, 0]));
+
+    var leg_matrix = Mat4.translation([0.6, -2.5, 0]).times(Mat4.scale([0.4, 1, 0.5]));
+    var leg_matrix_2 = Mat4.translation([- 1.2, 0, 0]).times(leg_matrix);
+
+    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(leg_matrix), 0);
+    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(leg_matrix_2), 0);
     //forearm_matrix_2 = forearm_matrix;
 
-    var gun_matrix = Mat4.rotation(Math.PI/2 - incline_angle, Vec.of(0,1,0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
+    /*var gun_matrix = Mat4.rotation(Math.PI/2 - incline_angle, Vec.of(0,1,0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
     var gun_matrix_2 = Mat4.rotation(Math.PI/2 + incline_angle, Vec.of(0, 1, 0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
-    /*Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], chest.times(arm_matrix).times(forearm_matrix).times(hand_matrix));
-    Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], chest.times(arm_matrix_2).times(forearm_matrix).times(hand_matrix));*/
 
     Gun.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix).times(forearm_matrix).times(gun_matrix));
-    Gun.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2));
+    Gun.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2));*/
   }
 }
-
+/*
 class Bee extends Shape 
 {
   constructor()
@@ -577,6 +582,130 @@ class Bee extends Shape
     body_matrix = body_matrix.times(Mat4.scale([1, 0.5, 1]));
     //Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], body_matrix.times(Mat4.translation(-4, 0, 0)));
     Subdivision_Sphere.prototype.insert_transformed_copy_into( this, [ 3 ], body_matrix.times( Mat4.translation([ 0, -2, 0 ]) ) );
+
+    this.draw_wings(body_matrix)
+
+  }
+
+  draw_wings(thorax_matrix) 
+  {
+      var sqrt_2 = Math.sqrt(2);
+
+      
+      var wing_plane_angle =  (Math.PI/4) //* (Math.sin(2.5 * this.t + Math.PI)) - Math.PI/4; // angle created By the wings and the x-axis
+
+
+      for(var i = 0; i < 2; i++) {
+        for(var j = 0; j < 2; j++) {
+          var wing_matrix = thorax_matrix.times(Mat4.translation([Math.pow(-1, i) * 3, 1, Math.pow(-1,j) * 1])); // TRANSLATE TO THORAX CORNERS
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.pow(-1, j) * wing_plane_angle, Vec.of(1,0,0))).times(Mat4.translation([0, 0.1, Math.pow(-1,j)*3])); // TRANSLATE CORNER TO CENTER AND THEN ROTATE AROUND X
+          wing_matrix = wing_matrix.times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0))).times(Mat4.scale([1.5*sqrt_2,0.1,1.5*sqrt_2])); // Scale and then rotate around Y
+
+          //this.shapes.box.draw(graphics_state, wing_matrix, this.blue);
+          Cube.prototype.insert_transformed_copy_into(this, [], wing_matrix, 0);
+        }
+      }
+  }
+  /*
+  draw_leg(graphics_state, thorax_matrix, attach_point_vector, thorax_angle, revTrue)
+  {
+
+    var leg_matrix = Mat4.translation(attach_point_vector).times(Mat4.rotation(-thorax_angle, Vec.of(1,0,0))); // rotate and attach correctly at the attach_point passed into the function
+    leg_matrix = leg_matrix.times(Mat4.translation([0,-0.6,(Math.pow(-1, revTrue)) * 0.1])).times(Mat4.scale([0.1,0.6,0.1])); // scale and translate to rotate around correct hinge point
+
+    this.shapes.box.draw(graphics_state, thorax_matrix.times(leg_matrix), this.red);
+
+
+    leg_matrix = leg_matrix.times(Mat4.scale([10,1/0.6,10])).times(Mat4.translation([0,0.6,(Math.pow(-1, revTrue + 1)) * 0.1])); // undo scale and translations
+    
+  
+    var second_angle = Math.pow(-1, revTrue) * (Math.PI/8 + Math.PI/8 * Math.cos(2.5 * this.t + Math.PI/4)) ; // angle of second part of leg with respect to first part
+
+    var second_leg_matrix = thorax_matrix.times(leg_matrix).times(Mat4.translation([0, -1.2, 0])).times(Mat4.rotation(second_angle, Vec.of(1,0,0))); // rotate and translate to correct hinge point
+    second_leg_matrix = second_leg_matrix.times(Mat4.translation([0,-0.6,(Math.pow(-1, revTrue)) * 0.1])).times(Mat4.scale([0.1,0.6,0.1])); // scale and translate to rotate around correct hinge
+
+    this.shapes.box.draw(graphics_state, second_leg_matrix, this.silver);
+
+  }
+
+  draw_antenna_boxes(graphics_state, prev_box_matrix, R, count, color)
+  {   
+      // if last box, undo translations and return it
+      if(count == 8) {
+        return prev_box_matrix.times(Mat4.scale([20,10,20])).times(Mat4.translation([0,0,0.05]));
+      }
+
+      // undo translations
+      prev_box_matrix = prev_box_matrix.times(Mat4.scale([20,10,20])).times(Mat4.translation([0,0,0.05]))
+
+      // rotate and then attach to correct hinge point
+      var next_box = prev_box_matrix.times(Mat4.translation([-0.05,0.1,-0.05])).times(Mat4.rotation(R, Vec.of(0,0,1)))
+      // scale and translate it so that it can be rotated around an edge
+      next_box = next_box.times(Mat4.translation([0.05,0.1, 0.00])).times(Mat4.scale([0.05,0.1,0.05]));
+
+      this.shapes.box.draw(graphics_state, next_box, color);
+      // change the color and increment count
+      // recursive call
+      if(color == this.brown) {
+        return this.draw_antenna_boxes(graphics_state, next_box, R , count + 1, this.silver);
+      }
+      else {
+        return this.draw_antenna_boxes(graphics_state, next_box, R , count + 1, this.brown);
+      }
+      
+
+  }
+  
+}
+*/
+
+class Helicopter extends Shape
+{
+  constructor()
+  { 
+    var transform = Mat4.identity();
+    var rotator_angle = Math.PI/2
+    super();
+    var body_matrix = transform.times(Mat4.scale([ 1, 1, 2 ]) );
+    Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4],  body_matrix);
+
+    body_matrix = body_matrix.times(Mat4.scale([1, 1, 0.5]));
+
+    var axle_matrix = Mat4.translation([0, 1.2, 0]).times(Mat4.scale([0.1, 0.2, 0.1]));
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(axle_matrix), 0);
+
+    axle_matrix = axle_matrix.times(Mat4.scale([10, 5, 10]));
+
+    var rotators_matrix = Mat4.translation([0, 0.2, 0]).times(Mat4.scale([3, 0.5, 3])).times(Mat4.rotation(rotator_angle, Vec.of(0,1,0)));
+    Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(axle_matrix).times(rotators_matrix), 0);
+
+    // USE CONE FOR TAIL
+    var tail_cone_matrix = Mat4.translation([0, 0, 3.5]).times(Mat4.scale([0.5, 0.5, 2]));
+    Cone_Tip.prototype.insert_transformed_copy_into(this, [20, 20, [[0,1],[0,1]]], body_matrix.times(tail_cone_matrix));
+    // Cubes for Leg of tail?
+
+    tail_cone_matrix = tail_cone_matrix.times(Mat4.scale([2,2, 0.5]))
+    var tail_windmill_matrix = Mat4.translation([0, 0, 2]).times(Mat4.rotation(Math.PI/2, Vec.of(0, 0, 1))).times(Mat4.scale([1.5, 0.2, 1.5]));
+    Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(tail_cone_matrix).times(tail_windmill_matrix), 0);
+
+    var helicopter_leg_1 = Mat4.translation([0.5, -0.75, 1]).times(Mat4.scale([0.05, 0.2, 0.05]));
+    var helicopter_leg_2 = Mat4.translation([0.5, -0.75, -1]).times(Mat4.scale([0.05, 0.2, 0.05]));
+    var helicopter_leg_3 = Mat4.translation([-0.5, -0.75, 1]).times(Mat4.scale([0.05, 0.2, 0.05]));
+    var helicopter_leg_4 = Mat4.translation([-0.5, -0.75, -1]).times(Mat4.scale([0.05, 0.2, 0.05]));
+
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_1));
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_2));
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_3));
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_4));
+
+    helicopter_leg_1 = helicopter_leg_1.times(Mat4.scale([20, 5, 20]))
+    helicopter_leg_3 = helicopter_leg_3.times(Mat4.scale([20, 5, 20]))
+
+    var helicopter_bar = Mat4.translation([0, -0.2, -1]).times(Mat4.scale([0.05, 0.05, 2]));
+    //var helicopter_bar_1 = Mat4.translation([0, -0.2, -1]).times(Mat4.scale([0.05, 0.05, 2]));
+
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_1).times(helicopter_bar));
+    Cube.prototype.insert_transformed_copy_into(this, [], body_matrix.times(helicopter_leg_3).times(helicopter_bar));
   }
 }
 
@@ -672,9 +801,10 @@ class Surfaces_Demo extends Scene_Component
                      arrow       : new Arrow(),*/
                      bullet      : new Bullet(20, 20, [[0,1],[0,1]]),
                      gun         : new Gun(),
-                     bee         : new Bee(),
+                     //bee         : new Bee(),
                      bee_leg     : new leg(20, 20, [[0,1],[0,1]]),
-                     human       : new Human()
+                     human       : new Human(),
+                     helicopter  : new Helicopter()
                    };
       this.submit_shapes( context, shapes );
       Object.assign( context.globals.graphics_state, { camera_transform: Mat4.translation([ -2,2,-15 ]), projection_transform: Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 ) } );
