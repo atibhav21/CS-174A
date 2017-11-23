@@ -522,6 +522,36 @@ class leg extends Surface_Of_Revolution
   }
 }
 
+class Human_Forearm_Gun extends Shape
+{
+  constructor()
+  {
+    super()
+    var forearm_matrix = Mat4.rotation(Math.PI/2, Vec.of(0,0,1)).times(Mat4.translation([0, -1.5, 0])).times(Mat4.scale([0.1, 1.5, 0.1]));
+    Cube.prototype.insert_transformed_copy_into(this, [], forearm_matrix, 0);
+  }
+}
+
+class Human_Arm_Gun extends Shape
+{
+  constructor()
+  {
+    super()
+    var chest = Mat4.identity();
+    var incline_angle = Math.PI/6;
+
+    var arm_matrix = Mat4.translation([1,1.5,0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))) //.times(Mat4.rotation(incline_angle, Vec.of(0,0,1)))
+    arm_matrix = arm_matrix.times(Mat4.scale([0.5, 1, 0.1])).times(Mat4.translation([0, -1, 0]));
+
+    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix), 0);
+    arm_matrix = arm_matrix.times(Mat4.translation([0, 1, 0])).times(Mat4.scale([2, 1, 10]));
+
+    /*var forearm_matrix = Mat4.translation([-0.5, -2, 0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,0,1))).times(Mat4.translation([0, -1.5, 0])).times(Mat4.scale([0.1, 1.5, 0.1]));
+    //var forearm_matrix_2 = Mat4.translation([-0.5, -2, 0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,0,1))).times(Mat4.translation([0, -1.5, 0])).times(Mat4.scale([0.1, 1.5, 0.1]));
+
+    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix).times(forearm_matrix), 0);*/
+  }
+}
 
 class Human extends Shape
 {
@@ -535,10 +565,12 @@ class Human extends Shape
     Cube.prototype.insert_transformed_copy_into(this, [], chest.times(Mat4.scale([1, 1.5, 0.5])), 0);
     Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], chest.times(Mat4.translation([0,2.25,0])).times(Mat4.scale([0.75,0.75,0.75])));
 
+    //chest = chest.times(Mat4.scale([1, 2/3, 2]))
+
     var arm_matrix = Mat4.translation([1,1.5,0]).times(Mat4.rotation(incline_angle, Vec.of(0,0,1))).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
     arm_matrix = arm_matrix.times(Mat4.scale([0.5, 1, 0.1])).times(Mat4.translation([0, -1, 0]));
 
-    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix), 0);
+    //Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix), 0);
 
     var arm_matrix_2 = Mat4.translation([-1, 1.5,0]).times(Mat4.rotation(- (2 * incline_angle), Vec.of(0,0,1))).times(Mat4.translation([-1, -1.5, 0])).times(arm_matrix); // other arm
     Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix_2), 0);
@@ -549,7 +581,7 @@ class Human extends Shape
     var forearm_matrix = Mat4.translation([-0.5, -2, 0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,0,1))).times(Mat4.translation([0, -1.5, 0])).times(Mat4.scale([0.1, 1.5, 0.1]));
     //var forearm_matrix_2 = Mat4.translation([-0.5, -2, 0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,0,1))).times(Mat4.translation([0, -1.5, 0])).times(Mat4.scale([0.1, 1.5, 0.1]));
 
-    Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix).times(forearm_matrix), 0); // draw forearms
+    //Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix).times(forearm_matrix), 0); // draw forearms
     Cube.prototype.insert_transformed_copy_into(this, [], chest.times(arm_matrix_2).times(forearm_matrix), 0);
 
     forearm_matrix = forearm_matrix.times(Mat4.scale([10, 2/3, 10])).times(Mat4.translation([0, 1.5, 0]));
@@ -804,7 +836,9 @@ class Surfaces_Demo extends Scene_Component
                      //bee         : new Bee(),
                      bee_leg     : new leg(20, 20, [[0,1],[0,1]]),
                      human       : new Human(),
-                     helicopter  : new Helicopter()
+                     helicopter  : new Helicopter(),
+                     human_gun_arm: new Human_Arm_Gun(),
+                     human_gun_forearm: new Human_Forearm_Gun(),
                    };
       this.submit_shapes( context, shapes );
       Object.assign( context.globals.graphics_state, { camera_transform: Mat4.translation([ -2,2,-15 ]), projection_transform: Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 ) } );

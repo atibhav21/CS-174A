@@ -104,17 +104,29 @@ class Helicopter_Object
 {
   constructor(model) {
     this.model = model
+    this.alive = true
   }
   move_helicopter() {
 
   }
 
   update_time_step(delta_t, current_time) {
-    var move_vector = Vec.of(0,  0.1 *  Math.sin(current_time) ,0)
+    if(this.alive) 
+    {
+      var move_vector = Vec.of(0,  0.1 *  Math.sin(current_time) ,0)
 
-    this.model = this.model.times(Mat4.translation(move_vector))
+      this.model = this.model.times(Mat4.translation(move_vector))
+    }
+    
   }
 }
+
+/*class Human_Arm_Object
+{
+  constructor(chest_matrix) {
+    this.chest_matrix = chest_matrix;
+  }
+}*/
 
 
 class Tutorial_Animation extends Scene_Component  // An example of a Scene_Component that our class Canvas_Manager can manage.  Like most, this one draws 3D shapes.
@@ -130,7 +142,9 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                      'bullet'          : new Bullet(20, 20, [[0,1],[0,1]]),
                      'gun'             : new Gun(),
                      'player'          : new Human(),
-                     'helicopter'      : new Helicopter()
+                     'helicopter'      : new Helicopter(),
+                     'human_arm_gun'   : new Human_Arm_Gun(),
+                     'human_forearm_gun': new Human_Forearm_Gun()
                   };
       this.submit_shapes( context, shapes );
       
@@ -172,12 +186,42 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
       this.currentObjects = []
       //this.currentObjects.push(this.gun.fire_bullet());
+
+      this.arm_incline = Math.PI/6;
       
+      this.forearm_angle = 0;
+
       var curr_context = this;
 
       this.key_triggered_button("Fire", "p", function() {
         curr_context.currentObjects.push(curr_context.gun.fire_bullet());
       });
+
+      this.key_triggered_button("Move Arm", "i", function(){
+        if(curr_context.arm_incline < 2 * Math.PI /3) {
+          curr_context.arm_incline += Math.PI/100;
+        }
+        
+      }); 
+
+      this.key_triggered_button("Lower Arm", "o", function() {
+        if(curr_context.arm_incline > Math.PI/60) {
+          curr_context.arm_incline -= Math.PI/100
+        }
+      });
+
+      this.key_triggered_button("Rotate Forearm Right", "k", function() {
+        if(curr_context.forearm_angle < Math.PI/3) {
+          curr_context.forearm_angle += Math.PI/100
+        }
+        
+      });
+
+      this.key_triggered_button("Rotate Forearm Left", "l", function() {
+        if(curr_context.forearm_angle > - Math.PI/3) {
+          curr_context.forearm_angle -= Math.PI/100
+        }
+      })
 
       /*this.key_triggered_button("Fire_Second", "q", function (){
         curr_context.currentObjects.push(curr_context.gun_2.fire_bullet());
@@ -263,18 +307,35 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         }
         
       }*/
-      var incline_angle = Math.PI/6;
-      var chest_matrix = Mat4.translation([0, 10, 0]).times(Mat4.rotation(Math.PI/4, Vec.of(0,1,0)));
-      var arm_matrix = Mat4.translation([1,1.5,0]).times(Mat4.rotation(incline_angle, Vec.of(0,0,1))).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
-      var arm_matrix_2 = Mat4.translation([-1,1.5,0]).times(Mat4.rotation(- incline_angle, Vec.of(0,0,1))).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))) // CHECK IF THIS IS CORRECT
-      var forearm_matrix = Mat4.translation([-0.5, -2, 0]).times(Mat4.rotation(Math.PI/2, Vec.of(0,0,1)))
+      var incline_angle = this.arm_incline;
+      var chest_matrix = Mat4.translation([0, 10, 0]).times(Mat4.rotation(Math.PI, Vec.of(0,1,0)));
+      //var arm_matrix = Mat4.translation([1,1.5,0]).times(Mat4.rotation(incline_angle, Vec.of(0,0,1))).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
+
+      //console.log(incline_angle)
+      var arm_matrix = Mat4.translation([1, 1.5, 0]).times(Mat4.rotation(incline_angle, Vec.of(0,0,1))).times(Mat4.translation([-1, -1.5, 0]))
+
+      //var arm_matrix_2 = Mat4.translation([-1,1.5,0]).times(Mat4.rotation(- incline_angle, Vec.of(0,0,1)))//.times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))) // CHECK IF THIS IS CORRECT
+
+
+      var forearm_matrix = Mat4.translation([1, -0.6, 0.5]).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
+      forearm_matrix = forearm_matrix.times(Mat4.rotation(this.forearm_angle, Vec.of(0,1,0)))
       
       var gun_matrix = Mat4.rotation(Math.PI/2 - incline_angle, Vec.of(0,1,0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
-      var gun_matrix_2 = Mat4.rotation(Math.PI/2 + incline_angle, Vec.of(0, 1, 0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
+      //var gun_matrix_2 = Mat4.rotation(Math.PI/2 + incline_angle, Vec.of(0, 1, 0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
+
+
 
       this.shapes.player.draw(graphics_state, chest_matrix, this.purplePlastic);
-      this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.purplePlastic);
-      this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2), this.purplePlastic);
+      
+      this.shapes.human_arm_gun.draw(graphics_state, chest_matrix.times(arm_matrix), this.purplePlastic)
+
+      this.shapes.human_forearm_gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix), this.purplePlastic);
+
+      //this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.purplePlastic);
+
+
+
+      //this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2), this.purplePlastic);
 
       var context = this;
       for (var i = 0; i < this.currentObjects.length; i++) {
@@ -294,8 +355,9 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
       this.gun.model = chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix);
 
       //console.log(this.helicopter.model.times(Vec.of(0,0,0,1)));
-
-      this.shapes.helicopter.draw(graphics_state, this.helicopter.model, this.greyPlastic);
+      if(this.helicopter.alive) {
+        this.shapes.helicopter.draw(graphics_state, this.helicopter.model, this.greyPlastic);
+      }
       //this.gun_2.model = chest_matrix.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2);
       this.update_time_step(graphics_state.animation_delta_time / 1000, graphics_state.animation_time/1000);
     }
