@@ -58,7 +58,7 @@ class Bullet_Object
     this.mass = mass;
     this.isAlive = true;
     this.horizontal_angle = Math.acos(this.velocity.normalized().dot(Vec.of(1,0,0,0))) + Math.PI/2; // WORLD CO-ORDINATE SYSTEM ANGLE
-    console.log(this.horizontal_angle);
+    //console.log(this.horizontal_angle);
     this.vertical_angle = this.velocity.normalized().dot(Vec.of(0, 1, 0, 0)); // TODO: CHECK
   }
 
@@ -95,7 +95,7 @@ class Gun_Object
   fire_bullet() {
     //console.log(this.angle);
     // Somehow use Model Transform
-    return new Bullet_Object(this.model.times(Vec.of(0, 0.5, 1.8, 1)), this.model.times(Vec.of(0, 0, 300, 0)), 0.01);
+    return new Bullet_Object(this.model.times(Vec.of(0, 0.5, 1.8, 1)), this.model.times(Vec.of(0, 0, 100, 0)), 0.01);
     //console.log(Mat4.inverse(this.model).times(Vec.of(0, 0, 0, 1)))
   }
 }
@@ -105,17 +105,56 @@ class Helicopter_Object
   constructor(model) {
     this.model = model
     this.alive = true
+    this.justDied = false
+    this.hits_taken = 0
   }
-  move_helicopter() {
+  attack_with_bullets(bullets_list)
+  {
+    var position_inverse = Mat4.inverse(this.model) // can speed this up, take inverse using translations
+    for (var i = 0; i < bullets_list.length; i++) {
+      if(bullets_list[i].isAlive)
+      {
+        // do something with bullet_list[i].pos (world coordinates position)
+        var bullet_helicopter_coords = position_inverse.times(bullets_list[i].pos.to4(true));
 
+        let x= bullet_helicopter_coords[0], y = bullet_helicopter_coords[1], z = bullet_helicopter_coords[2]
+        //console.log(x, y, z)
+        // check if x, y, z lie within the volume of the helicopter. If they do, then increase number of hits taken
+        var body_equation = Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z/2, 2)
+        if(body_equation < 1)
+        {
+          // Hit taken by Helicopter
+          bullets_list[i].mark_dead()
+          bullets_list.splice(i, 1)
+          i--;
+          this.hits_taken += 1
+          if(this.hits_taken >= 1) {
+            this.alive = false
+            this.justDied = true
+          }
+        } 
+
+      }
+    }
   }
 
-  update_time_step(delta_t, current_time) {
+  update_time_step(delta_t, current_time, bullet_objects) {
     if(this.alive) 
     {
       var move_vector = Vec.of(0,  0.1 *  Math.sin(current_time) ,0)
 
       this.model = this.model.times(Mat4.translation(move_vector))
+
+      this.attack_with_bullets(bullet_objects)
+    }
+    else if(this.justDied)
+    {
+      // Animate Helicopter falling to the ground
+      this.model = this.model.times(Mat4.translation([0, -0.1, 0]))
+      this.model = this.model.times(Mat4.rotation(current_time/100, Vec.of(0,1,0)))
+      if(this.model.times(Vec.of(0,0,0,1))[1] <= 0) {
+        this.justDied = false
+      }
     }
     
   }
@@ -144,7 +183,8 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                      'player'          : new Human(),
                      'helicopter'      : new Helicopter(),
                      'human_arm_gun'   : new Human_Arm_Gun(),
-                     'human_forearm_gun': new Human_Forearm_Gun()
+                     'human_forearm_gun': new Human_Forearm_Gun(),
+                     'helicopter_rotator': new Rotators()
                   };
       this.submit_shapes( context, shapes );
       
@@ -158,7 +198,8 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                              blueGlass    : context.get_instance( Phong_Model  ).material( Color.of( .5,.5, 1,.2 ), .4, .8, .4, 40 ),   // a bigger shiny spot.
                              fire         : context.get_instance( Funny_Shader ).material(),
                              stars        : context.get_instance( Phong_Model  ).material( Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/stars.png" ) ) ,
-                             gun_image    : context.get_instance( Phong_Model  ).material(  Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/gun_image.png" ) ) 
+                             gun_image    : context.get_instance( Phong_Model  ).material(  Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/gun_image.png" ) ) ,
+                             sand         : context.get_instance( Phong_Model  ).material( Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/sand.jpeg" ) )
                            } );  
                              
 
@@ -238,7 +279,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
     for (var i = 0; i < this.currentObjects.length; i++) {
       this.currentObjects[i].update_time_step(delta_t);
     }
-    this.helicopter.update_time_step(delta_t, current_time);
+    this.helicopter.update_time_step(delta_t, current_time, this.currentObjects);
   }
 
   display( graphics_state )
@@ -248,7 +289,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
       graphics_state.lights = [ new Light( Vec.of(  30,  30,  34, 1 ), Color.of( 0, .4, 0, 1 ), 100000 ),      // shader.  Arguments to construct a Light(): Light source position
                                 new Light( Vec.of( -10, -20, -14, 0 ), Color.of( 1, 1, .3, 1 ), 100    ) ];    // or vector (homogeneous coordinates), color, and size.  
       
-      this.shapes.box.draw( graphics_state, Mat4.scale([ 30,.1,30 ]), this.purplePlastic );  
+      this.shapes.box.draw( graphics_state, Mat4.scale([ 100,.1,100 ]), this.sand );  
 
       var t = graphics_state.animation_time/1000;
       /*model_transform = model_transform.times(Mat4.translation(0, 10, 0));
@@ -320,7 +361,11 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
       var forearm_matrix = Mat4.translation([1, -0.6, 0.5]).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
       forearm_matrix = forearm_matrix.times(Mat4.rotation(this.forearm_angle, Vec.of(0,1,0)))
       
-      var gun_matrix = Mat4.rotation(Math.PI/2 - incline_angle, Vec.of(0,1,0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
+      //var gun_matrix = Mat4.rotation(Math.PI/2 - incline_angle, Vec.of(0,1,0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
+
+      var gun_matrix = Mat4.translation([3, 0, 0]).times(Mat4.scale([0.5,0.5,0.5]))
+      gun_matrix = gun_matrix.times(Mat4.rotation(incline_angle, Vec.of(1,0,0))).times(Mat4.rotation(Math.PI/2, Vec.of(0, 1, 0)))
+
       //var gun_matrix_2 = Mat4.rotation(Math.PI/2 + incline_angle, Vec.of(0, 1, 0)).times(Mat4.translation([0, -3.1, 0])).times(Mat4.rotation(Math.PI/2, Vec.of(1,0,0))).times(Mat4.scale([0.5,0.5,0.5]));
 
 
@@ -331,7 +376,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
       this.shapes.human_forearm_gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix), this.purplePlastic);
 
-      //this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.purplePlastic);
+      this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.purplePlastic);
 
 
 
@@ -342,11 +387,13 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         //model_transform.post_multiply(Mat4.translation(context.currentObjects[i].pos));
         if(context.currentObjects[i].isAlive) {
           // TODO: FIX THIS ANGLE ROTATION, DOESN'T WORK FOR CERTAIN ANGLES
-          var bullet_transformation = model_transform.times(Mat4.translation(context.currentObjects[i].pos)).times(Mat4.rotation(context.currentObjects[i].horizontal_angle, Vec.of(0,1,0)));
+          var bullet_transformation = model_transform.times(Mat4.translation(context.currentObjects[i].pos))
+          bullet_transformation = bullet_transformation.times(Mat4.rotation(context.currentObjects[i].horizontal_angle, Vec.of(0,1,0)));
           context.shapes.bullet.draw(graphics_state, bullet_transformation , context.greyPlastic);
           var check_below_ground = bullet_transformation.times(Vec.of(0,0,0,1));
           if(check_below_ground[1] <= 0) {
             context.currentObjects[i].mark_dead();
+            context.currentObjects.splice(i, 1);
           }
         }
         
@@ -355,9 +402,29 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
       this.gun.model = chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix);
 
       //console.log(this.helicopter.model.times(Vec.of(0,0,0,1)));
-      if(this.helicopter.alive) {
+      if(this.helicopter.alive || this.helicopter.justDied) {
         this.shapes.helicopter.draw(graphics_state, this.helicopter.model, this.greyPlastic);
+
+        var rotators_matrix = Mat4.translation([0, 1.2, 0])
+        if(this.helicopter.alive) {
+          rotators_matrix = rotators_matrix.times(Mat4.rotation(graphics_state.animation_time/50, Vec.of(0,1,0)));
+        }
+        else
+        {
+          var current_y = this.helicopter.model.times(Vec.of(0,0,0,1))[1]
+          rotators_matrix = rotators_matrix.times(Mat4.rotation(graphics_state.animation_time/(100 * current_y), Vec.of(0,1,0)))
+        }
+        
+
+        this.shapes.helicopter_rotator.draw(graphics_state, this.helicopter.model.times(rotators_matrix), this.greyPlastic);
+
+        var tail_rotators_matrix = Mat4.translation([0, 0, 5.4]).times(Mat4.rotation(Math.PI/2, Vec.of(0, 0, 1)))
+        tail_rotators_matrix = tail_rotators_matrix.times(Mat4.rotation(graphics_state.animation_time/50, Vec.of(0,1,0)))
+        tail_rotators_matrix = tail_rotators_matrix.times(Mat4.scale([0.3, 0.3, 0.3]));
+
+        this.shapes.helicopter_rotator.draw(graphics_state, this.helicopter.model.times(tail_rotators_matrix), this.greyPlastic);
       }
+      
       //this.gun_2.model = chest_matrix.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2);
       this.update_time_step(graphics_state.animation_delta_time / 1000, graphics_state.animation_time/1000);
     }

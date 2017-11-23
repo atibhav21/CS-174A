@@ -691,6 +691,17 @@ class Bee extends Shape
 }
 */
 
+
+class Rotators extends Shape
+{
+  constructor()
+  {
+    super()
+    var rotators_matrix = Mat4.scale([3, 0.5, 3])//.times(Mat4.rotation(rotator_angle, Vec.of(0,1,0))); Mat4.translation([0, 0.2, 0])
+    Windmill.prototype.insert_transformed_copy_into(this,[5], rotators_matrix, 0);
+  }
+}
+
 class Helicopter extends Shape
 {
   constructor()
@@ -708,8 +719,8 @@ class Helicopter extends Shape
 
     axle_matrix = axle_matrix.times(Mat4.scale([10, 5, 10]));
 
-    var rotators_matrix = Mat4.translation([0, 0.2, 0]).times(Mat4.scale([3, 0.5, 3])).times(Mat4.rotation(rotator_angle, Vec.of(0,1,0)));
-    Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(axle_matrix).times(rotators_matrix), 0);
+    //var rotators_matrix = Mat4.translation([0, 0.2, 0]).times(Mat4.scale([3, 0.5, 3])).times(Mat4.rotation(rotator_angle, Vec.of(0,1,0)));
+    //Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(axle_matrix).times(rotators_matrix), 0);
 
     // USE CONE FOR TAIL
     var tail_cone_matrix = Mat4.translation([0, 0, 3.5]).times(Mat4.scale([0.5, 0.5, 2]));
@@ -717,8 +728,8 @@ class Helicopter extends Shape
     // Cubes for Leg of tail?
 
     tail_cone_matrix = tail_cone_matrix.times(Mat4.scale([2,2, 0.5]))
-    var tail_windmill_matrix = Mat4.translation([0, 0, 2]).times(Mat4.rotation(Math.PI/2, Vec.of(0, 0, 1))).times(Mat4.scale([1.5, 0.2, 1.5]));
-    Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(tail_cone_matrix).times(tail_windmill_matrix), 0);
+    /*var tail_windmill_matrix = Mat4.translation([0, 0, 2]).times(Mat4.rotation(Math.PI/2, Vec.of(0, 0, 1))).times(Mat4.scale([1.5, 0.2, 1.5]));
+    Windmill.prototype.insert_transformed_copy_into(this,[5], body_matrix.times(tail_cone_matrix).times(tail_windmill_matrix), 0);*/
 
     var helicopter_leg_1 = Mat4.translation([0.5, -0.75, 1]).times(Mat4.scale([0.05, 0.2, 0.05]));
     var helicopter_leg_2 = Mat4.translation([0.5, -0.75, -1]).times(Mat4.scale([0.05, 0.2, 0.05]));
