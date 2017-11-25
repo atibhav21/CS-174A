@@ -563,7 +563,7 @@ class Human extends Shape
 
     //Cube.prototype.insert_transformed_copy_into(this, [], chest.times(Mat4.scale(2, 1, 1)), 0);
     Cube.prototype.insert_transformed_copy_into(this, [], chest.times(Mat4.scale([1, 1.5, 0.5])), 0);
-    Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], chest.times(Mat4.translation([0,2.25,0])).times(Mat4.scale([0.75,0.75,0.75])));
+    //Subdivision_Sphere.prototype.insert_transformed_copy_into(this, [4], chest.times(Mat4.translation([0,2.25,0])).times(Mat4.scale([0.75,0.75,0.75])));
 
     //chest = chest.times(Mat4.scale([1, 2/3, 2]))
 

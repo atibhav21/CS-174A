@@ -57,9 +57,10 @@ class Bullet_Object
     this.forces = [];
     this.mass = mass;
     this.isAlive = true;
-    this.horizontal_angle = Math.acos(this.velocity.normalized().dot(Vec.of(1,0,0,0))) + Math.PI/2; // WORLD CO-ORDINATE SYSTEM ANGLE
+    this.horizontal_angle = Math.acos(this.velocity.normalized().dot(Vec.of(1,0,0,0))) - Math.PI/2; // WORLD CO-ORDINATE SYSTEM ANGLE
     //console.log(this.horizontal_angle);
     this.vertical_angle = this.velocity.normalized().dot(Vec.of(0, 1, 0, 0)); // TODO: CHECK
+    console.log(this.vertical_angle)
   }
 
   total_force()
@@ -95,7 +96,7 @@ class Gun_Object
   fire_bullet() {
     //console.log(this.angle);
     // Somehow use Model Transform
-    return new Bullet_Object(this.model.times(Vec.of(0, 0.5, 1.8, 1)), this.model.times(Vec.of(0, 0, 100, 0)), 0.01);
+    return new Bullet_Object(this.model.times(Vec.of(0, 0.5, 1.8, 1)), this.model.times(Vec.of(0, 0, 200, 0)), 0.01);
     //console.log(Mat4.inverse(this.model).times(Vec.of(0, 0, 0, 1)))
   }
 }
@@ -128,9 +129,10 @@ class Helicopter_Object
           bullets_list.splice(i, 1)
           i--;
           this.hits_taken += 1
-          if(this.hits_taken >= 1) {
+          if(this.hits_taken >= 5) {
             this.alive = false
             this.justDied = true
+            return true;
           }
         } 
 
@@ -145,7 +147,7 @@ class Helicopter_Object
 
       this.model = this.model.times(Mat4.translation(move_vector))
 
-      this.attack_with_bullets(bullet_objects)
+      return this.attack_with_bullets(bullet_objects)
     }
     else if(this.justDied)
     {
@@ -184,7 +186,9 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                      'helicopter'      : new Helicopter(),
                      'human_arm_gun'   : new Human_Arm_Gun(),
                      'human_forearm_gun': new Human_Forearm_Gun(),
-                     'helicopter_rotator': new Rotators()
+                     'helicopter_rotator': new Rotators(),
+                     'ball'              : new Subdivision_Sphere(3),
+                     'axis_arrows'       : new Axis_Arrows()
                   };
       this.submit_shapes( context, shapes );
       
@@ -198,8 +202,16 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                              blueGlass    : context.get_instance( Phong_Model  ).material( Color.of( .5,.5, 1,.2 ), .4, .8, .4, 40 ),   // a bigger shiny spot.
                              fire         : context.get_instance( Funny_Shader ).material(),
                              stars        : context.get_instance( Phong_Model  ).material( Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/stars.png" ) ) ,
-                             gun_image    : context.get_instance( Phong_Model  ).material(  Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/gun_image.png" ) ) ,
-                             sand         : context.get_instance( Phong_Model  ).material( Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/sand.jpeg" ) )
+                             rgb : context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/rgb.jpg" )),
+                             sand : context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/sand_4.jpg" )),
+                             sky  : context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/sky_3.jpg" )),
+                             camo : context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/camouflage_3.png" )),
+                             human_face: context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/human_face.jpg" )),
+                             bullet: context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/bullet.jpg" )),
+                             helicopter_texture: context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/helicopter_texture.jpg" )),
+                             gun_texture: context.get_instance( Phong_Model  ).material( Color.of( 0,0,0,1 ), 1, .5, .5, 40, context.get_instance( "assets/gun.jpg" ))
+                             /*gun_image    : context.get_instance( Phong_Model  ).material(  Color.of( 0,0,1,1 ), .5, .5, .5, 40, context.get_instance( "assets/gun_image.png" ) ) ,
+                             sand         : context.get_instance( Phong_Model  ).material( Color.of( 0,1,1,0 ), .5, .5, .5, 40, context.get_instance( "assets/sand.jpg" ) )*/
                            } );  
                              
 
@@ -234,8 +246,13 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
       var curr_context = this;
 
+      this.state = "Shoot";
+
       this.key_triggered_button("Fire", "p", function() {
         curr_context.currentObjects.push(curr_context.gun.fire_bullet());
+        if(curr_context.state === "Shoot") {
+          curr_context.state = "Bullet";
+        }
       });
 
       this.key_triggered_button("Move Arm", "i", function(){
@@ -279,7 +296,13 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
     for (var i = 0; i < this.currentObjects.length; i++) {
       this.currentObjects[i].update_time_step(delta_t);
     }
-    this.helicopter.update_time_step(delta_t, current_time, this.currentObjects);
+    var x = this.helicopter.update_time_step(delta_t, current_time, this.currentObjects)
+
+    if(x)
+    {
+      //console.log("what is life")
+      this.state = "Helicopter"
+    }
   }
 
   display( graphics_state )
@@ -290,7 +313,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
                                 new Light( Vec.of( -10, -20, -14, 0 ), Color.of( 1, 1, .3, 1 ), 100    ) ];    // or vector (homogeneous coordinates), color, and size.  
       
       this.shapes.box.draw( graphics_state, Mat4.scale([ 100,.1,100 ]), this.sand );  
-
+      this.shapes.ball.draw(graphics_state, Mat4.scale([100, 100, 100]), this.sky)
       var t = graphics_state.animation_time/1000;
       /*model_transform = model_transform.times(Mat4.translation(0, 10, 0));
 
@@ -349,7 +372,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         
       }*/
       var incline_angle = this.arm_incline;
-      var chest_matrix = Mat4.translation([0, 10, 0]).times(Mat4.rotation(Math.PI, Vec.of(0,1,0)));
+      var chest_matrix = Mat4.translation([0, 4, 0]).times(Mat4.rotation(Math.PI, Vec.of(0,1,0)));
       //var arm_matrix = Mat4.translation([1,1.5,0]).times(Mat4.rotation(incline_angle, Vec.of(0,0,1))).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0)))
 
       //console.log(incline_angle)
@@ -370,13 +393,15 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
 
 
-      this.shapes.player.draw(graphics_state, chest_matrix, this.purplePlastic);
+      this.shapes.player.draw(graphics_state, chest_matrix, this.camo);
       
-      this.shapes.human_arm_gun.draw(graphics_state, chest_matrix.times(arm_matrix), this.purplePlastic)
+      this.shapes.ball.draw(graphics_state, chest_matrix.times(Mat4.translation([0,2.25,0])).times(Mat4.scale([0.75,0.75,0.75])).times(Mat4.rotation(Math.PI, Vec.of(0, 0, 1))).times(Mat4.rotation(Math.PI/2, Vec.of(0, 1, 0))), this.human_face);
 
-      this.shapes.human_forearm_gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix), this.purplePlastic);
+      this.shapes.human_arm_gun.draw(graphics_state, chest_matrix.times(arm_matrix), this.camo)
 
-      this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.purplePlastic);
+      this.shapes.human_forearm_gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix), this.camo);
+
+      this.shapes.gun.draw(graphics_state, chest_matrix.times(arm_matrix).times(forearm_matrix).times(gun_matrix), this.gun_texture);
 
 
 
@@ -388,8 +413,10 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         if(context.currentObjects[i].isAlive) {
           // TODO: FIX THIS ANGLE ROTATION, DOESN'T WORK FOR CERTAIN ANGLES
           var bullet_transformation = model_transform.times(Mat4.translation(context.currentObjects[i].pos))
-          bullet_transformation = bullet_transformation.times(Mat4.rotation(context.currentObjects[i].horizontal_angle, Vec.of(0,1,0)));
-          context.shapes.bullet.draw(graphics_state, bullet_transformation , context.greyPlastic);
+          bullet_transformation = bullet_transformation.times(Mat4.rotation(context.currentObjects[i].vertical_angle - Math.PI/2, Vec.of(1,0,0)));
+          bullet_transformation = bullet_transformation.times(Mat4.rotation(context.currentObjects[i].horizontal_angle, Vec.of(0,1,0)))
+          
+          context.shapes.bullet.draw(graphics_state, bullet_transformation , context.bullet);
           var check_below_ground = bullet_transformation.times(Vec.of(0,0,0,1));
           if(check_below_ground[1] <= 0) {
             context.currentObjects[i].mark_dead();
@@ -403,7 +430,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
       //console.log(this.helicopter.model.times(Vec.of(0,0,0,1)));
       if(this.helicopter.alive || this.helicopter.justDied) {
-        this.shapes.helicopter.draw(graphics_state, this.helicopter.model, this.greyPlastic);
+        this.shapes.helicopter.draw(graphics_state, this.helicopter.model, this.helicopter_texture);
 
         var rotators_matrix = Mat4.translation([0, 1.2, 0])
         if(this.helicopter.alive) {
@@ -425,6 +452,32 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         this.shapes.helicopter_rotator.draw(graphics_state, this.helicopter.model.times(tail_rotators_matrix), this.greyPlastic);
       }
       
+      var context = this;
+
+      this.shapes.axis_arrows.draw(graphics_state, Mat4.translation([10,10,0]), this.rgb);
+
+      // Set up the Camera
+      console.log(this.state)
+      if(this.state === "Shoot") {
+       var model = chest_matrix.times(arm_matrix).times(forearm_matrix)
+        //console.log(model.times(Vec.of(1,3,0,1)).to3())
+        console.log(model.times(Vec.of(-8,3,1,1)).to3())
+        var looker = Mat4.look_at(Vec.of(-1,6,-8) , this.helicopter.model.times(Vec.of(0,0,0,1)).to3(), Vec.of(0,1,0))
+        //console.log(looker)
+        //context.shapes.ball.draw(graphics_state,looker.times(Mat4.translation(0,10,0)), context.purplePlastic) //my object to help show camera orientation
+        //var trans = Mat4.inverse(looker) //now inverse it because cam requires the inverse
+        graphics_state.camera_transform = looker;//Mat4.inverse(trans)
+        //graphics_state.camera_transform = looker
+        //graphics_state.camera_transform = Mat4.look_at(Vec.of(-3,4,-5,1), Vec.of(1,-15,-10,1),Vec.of(1,0,0,0))
+      }
+      else if(this.state === "Bullet") {
+
+      }
+      else if (this.state === "Helicopter") {
+
+      }
+      //graphics_state.camera_transform = Mat4.look_at(this.gun.model.times(Vec.of(0,1,0,0)), Vec.of(10, 5, 5, 1), Vec.of(1, 1, 0, 0));
+
       //this.gun_2.model = chest_matrix.times(arm_matrix_2).times(forearm_matrix).times(gun_matrix_2);
       this.update_time_step(graphics_state.animation_delta_time / 1000, graphics_state.animation_time/1000);
     }
