@@ -261,6 +261,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         }
         
       }); 
+      this.new_line();
 
       this.key_triggered_button("Lower Arm", "o", function() {
         if(curr_context.arm_incline > Math.PI/60) {
@@ -280,6 +281,9 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
           curr_context.forearm_angle -= Math.PI/100
         }
       })
+      this.new_line();
+
+      this.prev_time = 0;
 
       /*this.key_triggered_button("Fire_Second", "q", function (){
         curr_context.currentObjects.push(curr_context.gun_2.fire_bullet());
@@ -306,7 +310,21 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
   }
 
   display( graphics_state )
-    { var model_transform = Mat4.identity();             // We begin with a brand new model_transform every frame.
+    {
+      var context_current = this;
+      this.live_string(function() {
+        
+        
+        if(graphics_state.animation_time - context_current.prev_time > 0) {
+          var time = 1000/ (graphics_state.animation_time - context_current.prev_time)
+          context_current.prev_time = graphics_state.animation_time;
+          return "Frame Rate: " + Math.round(time) + " fps";
+        }
+        
+      });
+
+
+     var model_transform = Mat4.identity();             // We begin with a brand new model_transform every frame.
       
       // *** Lights: *** Values of vector or point lights over time.  Two different lights *per shape* supported by Phong_Shader; more requires changing a number in the vertex 
       graphics_state.lights = [ new Light( Vec.of(  30,  30,  34, 1 ), Color.of( 0, .4, 0, 1 ), 100000 ),      // shader.  Arguments to construct a Light(): Light source position
@@ -439,7 +457,7 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         else
         {
           var current_y = this.helicopter.model.times(Vec.of(0,0,0,1))[1]
-          rotators_matrix = rotators_matrix.times(Mat4.rotation(graphics_state.animation_time/(100 * current_y), Vec.of(0,1,0)))
+          rotators_matrix = rotators_matrix.times(Mat4.rotation(graphics_state.animation_time/(1000000 * current_y), Vec.of(0,1,0)))
         }
         
 
@@ -451,10 +469,14 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
 
         this.shapes.helicopter_rotator.draw(graphics_state, this.helicopter.model.times(tail_rotators_matrix), this.greyPlastic);
       }
+
+      if(this.helicopter.model.times(Vec.of(0,0,0,1))[1] <= 0) {
+        this.state = "Shoot"
+      }
       
       var context = this;
 
-      this.shapes.axis_arrows.draw(graphics_state, Mat4.translation([10,10,0]), this.rgb);
+      //this.shapes.axis_arrows.draw(graphics_state, Mat4.translation([10,10,0]), this.rgb);
 
       // Set up the Camera
       console.log(this.state)
@@ -471,10 +493,10 @@ class Tutorial_Animation extends Scene_Component  // An example of a Scene_Compo
         //graphics_state.camera_transform = Mat4.look_at(Vec.of(-3,4,-5,1), Vec.of(1,-15,-10,1),Vec.of(1,0,0,0))
       }
       else if(this.state === "Bullet") {
-
+        graphics_state.camera_transform = Mat4.look_at(Vec.of(-1, 6, -8), Vec.of(0, 10, 20), Vec.of(0,1,0))
       }
       else if (this.state === "Helicopter") {
-
+        graphics_state.camera_transform = Mat4.look_at(this.helicopter.model.times(Vec.of(-3,0,0,1)).to3(), Vec.of(-1,6,-8), Vec.of(0,1,0))
       }
       //graphics_state.camera_transform = Mat4.look_at(this.gun.model.times(Vec.of(0,1,0,0)), Vec.of(10, 5, 5, 1), Vec.of(1, 1, 0, 0));
 
