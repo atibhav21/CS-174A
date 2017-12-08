@@ -98,7 +98,7 @@ class Ray_Tracer extends Scene_Component    // Read in a text file that describe
       //        or k_refract, multiplied by the "complement" (1-alpha) of the Phong color this recursion.  Use argument is_primary to indicate whether this is the original
       //        ray or a recursion.  Use the argument light_to_check whenever a recursive call to trace() is done for computing a shadow ray.
       
-      if( color_remaining.norm() < .3 )    return Color.of( 0, 0, 0, 1 );  // Each recursion, check if there's enough remaining potential for the pixel to be brightened.
+      if( color_remaining.norm() < .3 )    return Color.of( 0, 0, 0, 1);  // Each recursion, check if there's enough remaining potential for the pixel to be brightened.
 
       let closest_intersection = { distance: Number.POSITIVE_INFINITY, ball: null, normal: null }    // An empty intersection object
       
@@ -122,10 +122,30 @@ class Ray_Tracer extends Scene_Component    // Read in a text file that describe
       for(var i = 0; i < this.lights.length; i += 1) {
         var light = this.lights[i];
         var light_vector = light.position.minus(intersection_point).normalized();
+
+        // TODO: Check if light is inside sphere, if it is, flip normal
+        /*if(closest_intersection.ball.model_transform.times(light.position) < 1)
+        {
+          console.log("Hit");
+          normal = normal.times(-1);
+        }*/
+
         let view_vector = ray.origin.minus(intersection_point).normalized();
         var halfway_vector = light_vector.plus(view_vector).normalized();
 
         let n = closest_intersection.ball.n; // shininess factor
+        
+        // check for shadows
+        var shadow_ray = {origin: intersection_point, dir: light_vector};
+        var shadow_intersection = {distance: Number.POSITIVE_INFINITY, ball: null, normal: null};
+
+        for(let b of this.balls) b.intersect(shadow_ray, shadow_intersection, 0.0001);
+
+        if(shadow_intersection.distance < Number.POSITIVE_INFINITY) {
+          // shadow ray interacted with some other object so no effect of this light source on the surface color
+          continue;
+        }
+        // TODO: Cast shadow ray with local lighting model
 
         let n_dot_l = normal.dot(light_vector);
         let n_dot_h = normal.dot(halfway_vector);
@@ -148,20 +168,23 @@ class Ray_Tracer extends Scene_Component    // Read in a text file that describe
         }
       }
 
+      
       let white_sub_surf = Vec.of(1,1,1).minus(surface_color);
 
       // reflected rays: cast a ray in the direction from the intersection point according to angles
-      let ray = {origin: intersection_point, dir: }; 
-      var reflected_color = trace(ray, color_remaining.times(closest_intersection.ball.k_r), false);
+      var r = normal.times(- 2 * ray.dir.normalized().dot(normal)).plus(ray.dir.normalized()).normalized() // get the reflected ray direction
+      let reflected_ray = {origin: intersection_point, dir: r}; 
+      var reflected_color = this.trace(reflected_ray, color_remaining.times(closest_intersection.ball.k_r), false).to3();
+      console.log(reflected_color);
       var pixel_color = surface_color.plus(white_sub_surf.times(closest_intersection.ball.k_r).mult_pairs(reflected_color))
 
       // refracted rays: Check if the material is transparent so that the ray can pass through, based on refractive index
       // Use Snell's law, k_refract is probably what intensity of the light will be refracted
 
       // shadow rays: cast ray from intersection point to light sources and see if
+      
 
-
-      return pixel_color;//closest_intersection.ball.color.to4(1);
+      return pixel_color.to4(1);//closest_intersection.ball.color.to4(1);
       //return Vec.of( 0,0,0,1 );
     }
 constructor( context )                    
