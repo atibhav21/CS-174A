@@ -51,10 +51,10 @@ class Ball      // These data members of a Ball below are automatically filled i
               existing_intersection.ball = this;
               existing_intersection.distance = farther_t;  
               existing_intersection.normal = Vec.of(0,0,1,0);
-              var normal_vector = s_prime.plus(c_prime.times(farther_t)).minus(Vec.of(0,0,0,1));// ray.origin.plus(ray.dir.times(farther_t)).minus(this.position).normalized(); // this is the vector normal before any transformations         
-              normal_vector = this.inverse.transposed().times(normal_vector);
-              normal_vector[3] = 0;
-              existing_intersection.normal = normal_vector.normalized();
+              var normal_vector = s_prime.plus(c_prime.times(farther_t)).minus(Vec.of(0,0,0,1));// unit sphere normal       
+              normal_vector = this.inverse.transposed().times(normal_vector); // normal of transformed object 
+              normal_vector[3] = 0; // set w coordinate to 0
+              existing_intersection.normal = normal_vector.times(-1).normalized(); // flip the normal vector because it is inside the sphere
               
             }
             else 
@@ -135,17 +135,15 @@ class Ray_Tracer extends Scene_Component    // Read in a text file that describe
 
         let n = closest_intersection.ball.n; // shininess factor
         
-        // check for shadows
+        // shadow rays: cast ray from intersection point to light sources and see if they intersect anything, if they don't return the result of trace using shadow ray
+        // check for shadows using if statement given
         var shadow_ray = {origin: intersection_point, dir: light_vector};
-        var shadow_intersection = {distance: Number.POSITIVE_INFINITY, ball: null, normal: null};
+        var shadow_ray_result = this.trace(shadow_ray, color_remaining, false, true, light);
 
-        for(let b of this.balls) b.intersect(shadow_ray, shadow_intersection, 0.0001);
-
-        if(shadow_intersection.distance < Number.POSITIVE_INFINITY) {
-          // shadow ray interacted with some other object so no effect of this light source on the surface color
+        if(shadow_ray_result === "Shadow! The light was blocked.")
+        {
           continue;
         }
-        // TODO: Cast shadow ray with local lighting model
 
         let n_dot_l = normal.dot(light_vector);
         let n_dot_h = normal.dot(halfway_vector);
@@ -175,13 +173,19 @@ class Ray_Tracer extends Scene_Component    // Read in a text file that describe
       var r = normal.times(- 2 * ray.dir.normalized().dot(normal)).plus(ray.dir.normalized()).normalized() // get the reflected ray direction
       let reflected_ray = {origin: intersection_point, dir: r}; 
       var reflected_color = this.trace(reflected_ray, color_remaining.times(closest_intersection.ball.k_r), false).to3();
-      console.log(reflected_color);
       var pixel_color = surface_color.plus(white_sub_surf.times(closest_intersection.ball.k_r).mult_pairs(reflected_color))
 
       // refracted rays: Check if the material is transparent so that the ray can pass through, based on refractive index
-      // Use Snell's law, k_refract is probably what intensity of the light will be refracted
-
-      // shadow rays: cast ray from intersection point to light sources and see if
+      // Use Snell's law, k_refract is what intensity of the light will be refracted
+      
+      var theta_air = Math.acos((normal.times(-1).normalized().dot(ray.dir.normalized())))
+      var theta_ball = Math.asin(Math.sin(theta_air) * closest_intersection.ball.refract_index);
+      
+      var refracted_ray_direction = normal.times(-1).times((1 - (theta_ball / theta_air))).plus(ray.dir.times(theta_ball/theta_air)).normalized(); // parametrized approach, won't work when moving from ball to air
+      
+      let refracted_ray = {origin: intersection_point, dir: refracted_ray_direction};
+      var refracted_color = this.trace(refracted_ray, color_remaining.times(closest_intersection.ball.k_refract), false).to3();
+      pixel_color = pixel_color.plus(white_sub_surf.times(closest_intersection.ball.k_refract).mult_pairs(refracted_color));
       
 
       return pixel_color.to4(1);//closest_intersection.ball.color.to4(1);
